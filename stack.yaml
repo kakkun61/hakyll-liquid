@@ -1,0 +1,6 @@
+resolver: lts-10.4
+packages:
+- .
+extra-deps:
+- liquid-0.1.0.3
+allow-newer: true

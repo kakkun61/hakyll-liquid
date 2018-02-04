@@ -14,8 +14,11 @@ import Hakyll
 import Hakyll.Core.Compiler
 import Text.Liquid
 
-liquidCompiler :: Aeson.Value -> Compiler (Item String)
-liquidCompiler context = getResourceBody >>= renderLiquid context
+liquidCompiler :: Metadata -> Compiler (Item String)
+liquidCompiler metadata = getResourceBody >>= renderLiquid (Aeson.Object metadata)
+
+liquidCompiler' :: Aeson.Value -> Compiler (Item String)
+liquidCompiler' context = getResourceBody >>= renderLiquid context
 
 renderLiquid :: Aeson.Value -> Item String -> Compiler (Item String)
 renderLiquid context item = do

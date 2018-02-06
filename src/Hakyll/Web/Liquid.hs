@@ -1,8 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hakyll.Web.Liquid
-  ( liquidCompiler
-  , renderLiquid
+  ( parseAndInterpretDefault
+  , parseAndInterpret
+  , parseAndInterpret'
+  , parse
+  , interpret
+  , interpret'
   ) where
 
 import Control.Monad.Error.Class
@@ -12,26 +16,36 @@ import qualified Data.Text as Text
 import qualified Data.Validation as Validation
 import Hakyll
 import Hakyll.Core.Compiler
-import Text.Liquid
+import qualified Text.Liquid as Liquid
 
-liquidCompiler :: Metadata -> Compiler (Item String)
-liquidCompiler metadata = getResourceBody >>= renderLiquid (Aeson.Object metadata)
-
-liquidCompiler' :: Aeson.Value -> Compiler (Item String)
-liquidCompiler' context = getResourceBody >>= renderLiquid context
-
-renderLiquid :: Aeson.Value -> Item String -> Compiler (Item String)
-renderLiquid context item = do
-  exprs <-
-    case parseTemplate (Text.pack $ itemBody item) of
-      Attoparsec.Done _ exprs -> return exprs
-      Attoparsec.Partial parser ->
-        case parser "" of
-          Attoparsec.Done _ exprs -> return exprs
-          Attoparsec.Partial _ -> throwError ["unexpected end of input"]
-          Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
-      Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
+parseAndInterpretDefault :: Compiler (Item String)
+parseAndInterpretDefault = do
   metadata <- getMetadata =<< getUnderlying
-  case interpret (Aeson.Object metadata) exprs of
-    Validation.AccSuccess text -> makeItem $ Text.unpack text
+  item <- getResourceBody
+  parse item >>= interpret metadata
+
+parseAndInterpret :: Metadata -> Compiler (Item String)
+parseAndInterpret metadata = getResourceBody >>= parse >>= interpret metadata
+
+parseAndInterpret' :: Aeson.Value -> Compiler (Item String)
+parseAndInterpret' context = getResourceBody >>= parse >>= interpret' context
+
+parse :: Item String -> Compiler (Item [Liquid.Expr])
+parse (Item identifier body) =
+  case Liquid.parseTemplate (Text.pack body) of
+    Attoparsec.Done _ exprs -> return $ Item identifier exprs
+    Attoparsec.Partial parser ->
+      case parser "" of
+        Attoparsec.Done _ exprs -> return $ Item identifier exprs
+        Attoparsec.Partial _ -> throwError ["unexpected end of input"]
+        Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
+    Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
+
+interpret :: Metadata -> Item [Liquid.Expr] -> Compiler (Item String)
+interpret metadata = interpret' (Aeson.Object metadata)
+
+interpret' :: Aeson.Value -> Item [Liquid.Expr] -> Compiler (Item String)
+interpret' context (Item identifier expressions) =
+  case Liquid.interpret context expressions of
+    Validation.AccSuccess text -> return $ Item identifier $ Text.unpack text
     Validation.AccFailure err -> throwError [show err]

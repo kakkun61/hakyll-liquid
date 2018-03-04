@@ -21,7 +21,7 @@ library
                      , aeson
                      , attoparsec
                      , hakyll
-                     , liquid
+                     , liquoh
                      , mtl
                      , text
                      , validation

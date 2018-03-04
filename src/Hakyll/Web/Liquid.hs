@@ -13,10 +13,9 @@ import Control.Monad.Error.Class
 import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.Text as Attoparsec
 import qualified Data.Text as Text
-import qualified Data.Validation as Validation
 import Hakyll
 import Hakyll.Core.Compiler
-import qualified Text.Liquid as Liquid
+import qualified Text.Liquoh as Liquid
 
 -- | Parse underlying item and compile it with its metadata as context.
 parseAndInterpretDefault :: Compiler (Item String)
@@ -34,24 +33,20 @@ parseAndInterpret' :: Aeson.Value -> Compiler (Item String)
 parseAndInterpret' context = getResourceBody >>= parse >>= interpret' context
 
 -- | Parse given item.
-parse :: Item String -> Compiler (Item [Liquid.Expr])
+parse :: Item String -> Compiler (Item [Liquid.ShopifyTemplate])
 parse (Item identifier body) =
-  case Liquid.parseTemplate (Text.pack body) of
-    Attoparsec.Done _ exprs -> return $ Item identifier exprs
-    Attoparsec.Partial parser ->
-      case parser "" of
-        Attoparsec.Done _ exprs -> return $ Item identifier exprs
-        Attoparsec.Partial _ -> throwError ["unexpected end of input"]
-        Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
+  case Liquid.parse (Text.pack body) of
+    Attoparsec.Done _ template -> return $ Item identifier template
+    Attoparsec.Partial _ -> throwError ["not reachable"]
     Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
 
 -- | Compile Liquid expressions with given metadata as context.
-interpret :: Metadata -> Item [Liquid.Expr] -> Compiler (Item String)
+interpret :: Metadata -> Item [Liquid.ShopifyTemplate] -> Compiler (Item String)
 interpret metadata = interpret' (Aeson.Object metadata)
 
 -- | Compile Liquid expressions with given context.
-interpret' :: Aeson.Value -> Item [Liquid.Expr] -> Compiler (Item String)
-interpret' context (Item identifier expressions) =
-  case Liquid.interpret context expressions of
-    Validation.AccSuccess text -> return $ Item identifier $ Text.unpack text
-    Validation.AccFailure err -> throwError [show err]
+interpret' :: Aeson.Value -> Item [Liquid.ShopifyTemplate] -> Compiler (Item String)
+interpret' context (Item identifier template) =
+  case Liquid.interpret context template of
+    Right text -> return $ Item identifier $ Text.unpack text
+    Left err -> throwError [show err]

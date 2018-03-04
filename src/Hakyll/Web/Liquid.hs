@@ -49,4 +49,4 @@ interpret' :: Aeson.Value -> Item [Liquid.ShopifyTemplate] -> Compiler (Item Str
 interpret' context (Item identifier template) =
   case Liquid.interpret context template of
     Right text -> return $ Item identifier $ Text.unpack text
-    Left err -> throwError [show err]
+    Left err -> throwError [Text.unpack err]

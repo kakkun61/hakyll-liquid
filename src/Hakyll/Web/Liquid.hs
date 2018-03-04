@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Hakyll.Web.Liquid
   ( parseAndInterpretDefault
   , parseAndInterpret
@@ -11,7 +9,6 @@ module Hakyll.Web.Liquid
 
 import Control.Monad.Error.Class
 import qualified Data.Aeson as Aeson
-import qualified Data.Attoparsec.Text as Attoparsec
 import qualified Data.Text as Text
 import Hakyll
 import Hakyll.Core.Compiler
@@ -36,9 +33,8 @@ parseAndInterpret' context = getResourceBody >>= parse >>= interpret' context
 parse :: Item String -> Compiler (Item [Liquid.ShopifyTemplate])
 parse (Item identifier body) =
   case Liquid.parse (Text.pack body) of
-    Attoparsec.Done _ template -> return $ Item identifier template
-    Attoparsec.Partial _ -> throwError ["not reachable"]
-    Attoparsec.Fail _ ctx msg -> throwError $ msg:ctx
+    Right template -> return $ Item identifier template
+    Left err -> throwError [Text.unpack err]
 
 -- | Compile Liquid expressions with given metadata as context.
 interpret :: Metadata -> Item [Liquid.ShopifyTemplate] -> Compiler (Item String)

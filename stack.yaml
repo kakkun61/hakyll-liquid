@@ -3,5 +3,5 @@ packages:
 - .
 extra-deps:
 - git: git@github.com:kakkun61/liquoh.git
-  commit: bc127370fd4f04c4f61c1c5985e3880aa04f67ee
+  commit: 024c6ed12d0217e9624b2da7ca7016459437ea7f
 allow-newer: true
